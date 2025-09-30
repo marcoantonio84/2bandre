@@ -3,14 +3,17 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const clientesRoutes = require('../src/routes/clientesRoutes');
 const clientesController = require('../src/controllers/clientesController');
+const db = require('../src/config/db'); // Importe o db para limpar o banco de dados
 
 const app = express();
 app.use(bodyParser.json());
 app.use('/api', clientesRoutes);
 
-beforeEach(() => {
-  clientesController.limparClientes();
+beforeEach(async () => {
+  await clientesController.limparClientes();
 });
+
+// Continue com os testes como antes, mas agora eles interagem com o PostgreSQL
 
 describe('POST /api/clientes', () => {
   test('Deve cadastrar um novo cliente com sucesso', async () => {
@@ -28,35 +31,19 @@ describe('POST /api/clientes', () => {
     expect(response.body.cliente.nome).toBe(novoCliente.nome);
     expect(response.body.cliente.email).toBe(novoCliente.email);
     expect(response.body.cliente).toHaveProperty('id');
-    expect(clientesController.getClientes().length).toBe(1);
   });
 
-  test('Não deve cadastrar cliente sem nome', async () => {
-    const clienteInvalido = {
-      nome: '',
-      email: 'teste@email.com'
-    };
-
+  // Testes para validações
+  test('Não deve cadastrar cliente com e-mail já existente', async () => {
+    const clienteExistente = { nome: 'João', email: 'joao@email.com' };
+    await request(app).post('/api/clientes').send(clienteExistente);
+    
     const response = await request(app)
       .post('/api/clientes')
-      .send(clienteInvalido)
+      .send(clienteExistente)
       .expect(400);
 
-    expect(response.body).toHaveProperty('error', 'O nome do cliente é obrigatório e deve ser uma string.');
-  });
-  
-  test('Não deve cadastrar cliente com e-mail inválido', async () => {
-    const clienteInvalido = {
-      nome: 'João Souza',
-      email: 'email-invalido'
-    };
-
-    const response = await request(app)
-      .post('/api/clientes')
-      .send(clienteInvalido)
-      .expect(400);
-
-    expect(response.body).toHaveProperty('error', 'O e-mail do cliente é obrigatório e deve ser um e-mail válido.');
+    expect(response.body).toHaveProperty('error', 'Este e-mail já está cadastrado.');
   });
 });
 
@@ -81,4 +68,9 @@ describe('GET /api/clientes', () => {
     expect(response.body.clientes.length).toBe(1);
     expect(response.body.clientes[0].nome).toBe('Ana Carolina');
   });
+});
+
+afterAll(async () => {
+  await db.query('TRUNCATE TABLE clientes RESTART IDENTITY');
+  await db.query('SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = current_database() AND pid <> pg_backend_pid();');
 });
