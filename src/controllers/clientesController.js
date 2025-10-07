@@ -1,44 +1,35 @@
-const db = require('../config/db');
+// src/controllers/clientesController.js
+const pool = require('../config/db');
 
-exports.criarCliente = async (req, res) => {
+exports.cadastrarCliente = async (req, res) => {
   const { nome, email } = req.body;
-  
-  if (!nome || typeof nome !== 'string') {
-    return res.status(400).json({ error: 'O nome do cliente é obrigatório e deve ser uma string.' });
-  }
-
-  // Validação de e-mail simplificada, você pode expandir
-  if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'O e-mail do cliente é obrigatório e deve ser um e-mail válido.' });
-  }
 
   try {
-    const text = 'INSERT INTO clientes(nome, email) VALUES($1, $2) RETURNING *';
-    const values = [nome, email];
-    const { rows } = await db.query(text, values);
-    
+    const result = await pool.query(
+      'INSERT INTO clientes (nome, email) VALUES ($1, $2) RETURNING *',
+      [nome, email]
+    );
+
     res.status(201).json({
       message: 'Cliente cadastrado com sucesso!',
-      cliente: rows[0]
+      cliente: result.rows[0],
     });
   } catch (error) {
-    if (error.code === '23505') { // Código de erro para violação de UNIQUE
-      return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
+    console.error(error);
+    if (error.code === '23505') { // email duplicado
+      res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
+    } else {
+      res.status(500).json({ erro: 'Erro ao cadastrar cliente' });
     }
-    res.status(500).json({ error: 'Falha ao cadastrar cliente.' });
   }
 };
 
 exports.listarClientes = async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT * FROM clientes');
-    res.status(200).json({ clientes: rows });
+    const result = await pool.query('SELECT * FROM clientes');
+    res.status(200).json({ clientes: result.rows });
   } catch (error) {
-    res.status(500).json({ error: 'Falha ao buscar clientes.' });
+    console.error(error);
+    res.status(500).json({ erro: 'Erro ao listar clientes' });
   }
-};
-
-// Funções para os testes
-exports.limparClientes = async () => {
-  await db.query('TRUNCATE TABLE clientes RESTART IDENTITY');
 };

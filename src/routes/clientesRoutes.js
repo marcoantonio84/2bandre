@@ -1,8 +1,10 @@
+// src/routes/clientesRoutes.js
 const express = require('express');
-const router = express.Router();
-const clientesController = require('../controllers/clientesController');
+const { cadastrarCliente, listarClientes } = require('../controllers/clientesController');
 
-router.post('/clientes', clientesController.criarCliente);
-router.get('/clientes', clientesController.listarClientes);
+const router = express.Router();
+
+router.post('/', cadastrarCliente);
+router.get('/', listarClientes);
 
 module.exports = router;

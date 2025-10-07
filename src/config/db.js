@@ -1,23 +1,12 @@
+// src/config/db.js
 const { Pool } = require('pg');
-require('dotenv').config();
 
 const pool = new Pool({
-  user: process.env.PG_USER,
-  host: process.env.PG_HOST,
-  database: process.env.PG_DATABASE,
-  password: process.env.PG_PASSWORD,
-  port: process.env.PG_PORT,
+  user: process.env.DB_USER || "postgres",
+  host: process.env.DB_HOST || "db", // "db" é o nome do serviço no docker-compose
+  database: process.env.DB_NAME || "clientes_db",
+  password: process.env.DB_PASSWORD || "postgres",
+  port: process.env.DB_PORT || 5432,
 });
 
-pool.on('connect', () => {
-  console.log('Conectado ao PostgreSQL!');
-});
-
-pool.on('error', (err) => {
-  console.error('Erro inesperado na conexão com o banco de dados:', err);
-  process.exit(-1);
-});
-
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-};
+module.exports = pool;
